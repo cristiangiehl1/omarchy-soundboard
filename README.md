@@ -40,6 +40,10 @@ Coloque seus `.mp3` em `~/Music` e rode `omarchy-soundboard`.
 
 Para remover: `./uninstall.sh`.
 
+> **Instalando com ajuda de IA?** O repo inclui um runbook [`AGENTS.md`](AGENTS.md) com
+> instruções passo a passo (pré-requisitos, instalação, atalho no Hyprland e verificação)
+> que um agente como o Claude Code pode seguir automaticamente.
+
 ## Atalho no Hyprland (opcional)
 
 Adicione ao seu `~/.config/hypr/bindings.conf`:
