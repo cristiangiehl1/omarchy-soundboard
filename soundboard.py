@@ -173,6 +173,7 @@ class SoundboardWindow(Adw.ApplicationWindow):
             self._flow.append(btn)
 
         self._stack.set_visible_child_name("grid" if sounds else "empty")
+        self._flow.invalidate_filter()
 
     def _on_play(self, button, path):
         try:
