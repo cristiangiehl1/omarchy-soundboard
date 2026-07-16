@@ -62,11 +62,12 @@ def scan_sounds(directory=MUSIC_DIR):
 class SoundPlayer:
     """Reprodutor de um som por vez usando GStreamer playbin."""
 
-    def __init__(self):
-        """Initialise playbin and connect bus watch. Note: automatic EOS/ERROR handling requires a running GLib main loop (provided by the GTK app)."""
+    def __init__(self, on_stopped=None):
+        """Initialise playbin and connect bus watch. Note: automatic EOS/ERROR handling requires a running GLib main loop (provided by the GTK app). on_stopped() é chamado quando o som termina, falha ou é parado."""
         self._playbin = Gst.ElementFactory.make("playbin", "player")
         if self._playbin is None:
             raise RuntimeError("Não foi possível criar o elemento playbin do GStreamer")
+        self._on_stopped = on_stopped
         self._volume = 1.0
         self._playbin.set_property("volume", self._volume)
         bus = self._playbin.get_bus()
@@ -77,6 +78,8 @@ class SoundPlayer:
         t = message.type
         if t in (Gst.MessageType.EOS, Gst.MessageType.ERROR):
             self._playbin.set_state(Gst.State.NULL)
+            if self._on_stopped is not None:
+                self._on_stopped()
 
     def play(self, path):
         self._playbin.set_state(Gst.State.NULL)
@@ -86,6 +89,8 @@ class SoundPlayer:
 
     def stop(self):
         self._playbin.set_state(Gst.State.NULL)
+        if self._on_stopped is not None:
+            self._on_stopped()
 
     def set_volume(self, fraction):
         self._volume = max(0.0, min(1.0, float(fraction)))
@@ -94,6 +99,23 @@ class SoundPlayer:
 
 _CYBERPUNK_CSS = b"""
 /* Cyberpunk Neon - paleta do omarchy-cyberpunk-neon */
+@keyframes neon-pulse {
+  0%   { border-color: #00f0ff; box-shadow: 0 0 8px rgba(0,240,255,0.55), inset 0 0 6px rgba(189,0,255,0.30); }
+  50%  { border-color: #ff2a6d; box-shadow: 0 0 22px rgba(255,42,109,0.9), inset 0 0 12px rgba(255,42,109,0.40); }
+  100% { border-color: #00f0ff; box-shadow: 0 0 8px rgba(0,240,255,0.55), inset 0 0 6px rgba(189,0,255,0.30); }
+}
+@keyframes border-flow {
+  0%,100% { border-bottom-color: rgba(0,240,255,0.45); }
+  50%     { border-bottom-color: rgba(189,0,255,0.65); }
+}
+@keyframes knob-glow {
+  0%,100% { box-shadow: 0 0 6px rgba(0,240,255,0.7); }
+  50%     { box-shadow: 0 0 15px rgba(0,240,255,1.0); }
+}
+@keyframes sign-flicker {
+  0%,17%,19%,21%,81%,100% { opacity: 1; }
+  18%,20%                 { opacity: 0.45; }
+}
 .cyber {
   background-color: #120621;
   background-image:
@@ -111,6 +133,7 @@ _CYBERPUNK_CSS = b"""
   background-color: rgba(18,6,33,0.92);
   border-bottom: 1px solid rgba(0,240,255,0.45);
   box-shadow: 0 2px 14px rgba(189,0,255,0.30);
+  animation: border-flow 4s ease-in-out infinite;
 }
 
 .cyber entry {
@@ -146,6 +169,11 @@ _CYBERPUNK_CSS = b"""
   color: #ffffff;
   box-shadow: 0 0 20px rgba(255,42,109,0.75);
 }
+.cyber button.sound-btn.playing {
+  color: #ffffff;
+  background-image: linear-gradient(160deg, rgba(0,240,255,0.26), rgba(255,42,109,0.20));
+  animation: neon-pulse 1.05s ease-in-out infinite;
+}
 .cyber button.sound-btn.error {
   border-color: #ff2a6d;
   color: #ff2a6d;
@@ -175,11 +203,12 @@ _CYBERPUNK_CSS = b"""
   box-shadow: 0 0 12px rgba(0,240,255,0.6);
 }
 
+.cyber scale { min-height: 20px; }
 .cyber scale trough {
   background-color: rgba(36,22,51,0.95);
   border: 1px solid rgba(0,240,255,0.3);
   border-radius: 6px;
-  min-height: 6px;
+  min-height: 8px;
 }
 .cyber scale highlight {
   background-image: linear-gradient(90deg, #bd00ff, #00f0ff);
@@ -188,13 +217,15 @@ _CYBERPUNK_CSS = b"""
 .cyber scale slider {
   background-color: #00f0ff;
   border: 0;
+  margin: 0;
   box-shadow: 0 0 8px rgba(0,240,255,0.8);
-  min-width: 14px;
-  min-height: 14px;
+  min-width: 16px;
+  min-height: 16px;
   border-radius: 50%;
+  animation: knob-glow 2.6s ease-in-out infinite;
 }
 
-.cyber statuspage title { color: #00f0ff; }
+.cyber statuspage title { color: #00f0ff; animation: sign-flicker 7s linear infinite; }
 .cyber statuspage image { color: #bd00ff; }
 """
 
@@ -216,7 +247,8 @@ class SoundboardWindow(Adw.ApplicationWindow):
         super().__init__(application=app, title="Mesa de Sons")
         self.set_default_size(640, 480)
         self.add_css_class("cyber")
-        self._player = SoundPlayer()
+        self._playing_btn = None
+        self._player = SoundPlayer(on_stopped=self._on_player_stopped)
 
         header = Adw.HeaderBar()
 
@@ -279,6 +311,7 @@ class SoundboardWindow(Adw.ApplicationWindow):
         self.reload()
 
     def reload(self):
+        self._playing_btn = None
         child = self._flow.get_first_child()
         while child is not None:
             nxt = child.get_next_sibling()
@@ -304,6 +337,19 @@ class SoundboardWindow(Adw.ApplicationWindow):
         except Exception:
             button.add_css_class("error")
             GLib.timeout_add(1000, self._clear_error, button)
+            return
+        self._set_playing(button)
+
+    def _set_playing(self, button):
+        if self._playing_btn is not None and self._playing_btn is not button:
+            self._playing_btn.remove_css_class("playing")
+        self._playing_btn = button
+        button.add_css_class("playing")
+
+    def _on_player_stopped(self):
+        if self._playing_btn is not None:
+            self._playing_btn.remove_css_class("playing")
+            self._playing_btn = None
 
     def _clear_error(self, button):
         button.remove_css_class("error")
