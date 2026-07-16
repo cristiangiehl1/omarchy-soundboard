@@ -31,11 +31,12 @@ Adicione ao seu `~/.config/hypr/bindings.conf`:
 
 ```conf
 # Mesa de Sons (soundboard)
-windowrulev2 = float, class:^(com.omarchy.soundboard)$
-windowrulev2 = size 640 480, class:^(com.omarchy.soundboard)$
-windowrulev2 = center, class:^(com.omarchy.soundboard)$
-bindd = SUPER ALT, S, Mesa de Sons, exec, uwsm-app -- omarchy-soundboard
+windowrule = float, match:class ^(com\.omarchy\.soundboard)$
+windowrule = size 640 480, match:class ^(com\.omarchy\.soundboard)$
+windowrule = center, match:class ^(com\.omarchy\.soundboard)$
+bindd = SUPER, A, Mesa de Sons, exec, uwsm-app -- omarchy-soundboard
 ```
 
-Depois `hyprctl reload`. (`SUPER+ALT+S` foi escolhido por estar livre no Omarchy;
-`SUPER+S` é scratchpad e `SUPER+SHIFT+S` é screenshot.)
+Depois `hyprctl reload`. (`SUPER+A` — "A" de Audio — foi escolhido por estar livre no
+Omarchy; as variações de `S` já são usadas pelo scratchpad.) A sintaxe `windowrule =
+..., match:...` é a do Hyprland 0.55+.
