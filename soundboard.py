@@ -172,8 +172,9 @@ class SoundboardWindow(Adw.ApplicationWindow):
             btn.connect("clicked", self._on_play, path)
             self._flow.append(btn)
 
-        self._stack.set_visible_child_name("grid" if sounds else "empty")
+        self._sounds = sounds
         self._flow.invalidate_filter()
+        self._update_view()
 
     def _on_play(self, button, path):
         try:
@@ -191,6 +192,7 @@ class SoundboardWindow(Adw.ApplicationWindow):
 
     def _on_search(self, _entry):
         self._flow.invalidate_filter()
+        self._update_view()
 
     def _filter_func(self, child):
         text = self._search.get_text().strip().lower()
@@ -198,6 +200,20 @@ class SoundboardWindow(Adw.ApplicationWindow):
             return True
         button = child.get_child()
         return text in button.get_label().lower()
+
+    def _update_view(self):
+        """Escolhe entre a grade e o estado vazio (sem sons x sem resultado de busca)."""
+        text = self._search.get_text().strip().lower()
+        if not self._sounds:
+            self._empty.set_title("Nenhum som encontrado")
+            self._empty.set_description(f"Coloque arquivos .mp3 em {MUSIC_DIR}")
+            self._stack.set_visible_child_name("empty")
+        elif text and not any(text in label.lower() for label, _ in self._sounds):
+            self._empty.set_title("Nenhum resultado")
+            self._empty.set_description("Nenhum som corresponde à busca.")
+            self._stack.set_visible_child_name("empty")
+        else:
+            self._stack.set_visible_child_name("grid")
 
 
 class SoundboardApp(Adw.Application):
