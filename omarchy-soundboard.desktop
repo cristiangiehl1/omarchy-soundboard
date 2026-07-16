@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Mesa de Sons
+Comment=Soundboard local para os .mp3 de ~/Music
+Exec=omarchy-soundboard
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupWMClass=com.omarchy.soundboard
