@@ -33,3 +33,18 @@ def pretty_label(filename):
         fallback_stem = re.sub(r"\.mp3$", "", base, flags=re.IGNORECASE)
         label = re.sub(r"[-_]+", " ", fallback_stem).title().replace(" ", "")
     return label
+
+
+def scan_sounds(directory=MUSIC_DIR):
+    """Lista (label, caminho_abs) dos .mp3 no diretório, ordenados por label."""
+    try:
+        entries = os.listdir(directory)
+    except OSError:
+        return []
+    sounds = []
+    for name in entries:
+        path = os.path.join(directory, name)
+        if name.lower().endswith(".mp3") and os.path.isfile(path):
+            sounds.append((pretty_label(name), os.path.abspath(path)))
+    sounds.sort(key=lambda item: item[0].lower())
+    return sounds
