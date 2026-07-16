@@ -3,6 +3,8 @@
 Mesa de sons (soundboard) local no estilo Steam para os arquivos `.mp3` em `~/Music`.
 Janela GTK4/libadwaita com grade de botões: clique para tocar (um som por vez),
 com busca, controle de volume e "Parar tudo". Reprodução apenas local (sem microfone virtual).
+Visual **cyberpunk neon** embutido (paleta violeta/magenta/cyan, glow nos botões), no mesmo
+estilo do tema [omarchy-cyberpunk-neon](https://github.com/cristiangiehl1/omarchy-cyberpunk-neon).
 
 Feito para [Omarchy](https://omarchy.org/) (Arch + Hyprland), mas roda em qualquer
 ambiente com GTK4, libadwaita e GStreamer.
@@ -31,9 +33,9 @@ Adicione ao seu `~/.config/hypr/bindings.conf`:
 
 ```conf
 # Mesa de Sons (soundboard)
-windowrule = float, match:class ^(com\.omarchy\.soundboard)$
+windowrule = float on, match:class ^(com\.omarchy\.soundboard)$
 windowrule = size 640 480, match:class ^(com\.omarchy\.soundboard)$
-windowrule = center, match:class ^(com\.omarchy\.soundboard)$
+windowrule = center on, match:class ^(com\.omarchy\.soundboard)$
 bindd = SUPER, A, Mesa de Sons, exec, uwsm-app -- omarchy-soundboard
 ```
 
