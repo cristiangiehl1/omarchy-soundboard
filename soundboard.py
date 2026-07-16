@@ -4,6 +4,13 @@
 import os
 import re
 
+import gi
+
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst  # noqa: E402
+
+Gst.init(None)
+
 MUSIC_DIR = os.path.expanduser("~/Music")
 
 _HASH_RE = re.compile(r"_[A-Za-z0-9]{5,10}$")
@@ -48,3 +55,35 @@ def scan_sounds(directory=MUSIC_DIR):
             sounds.append((pretty_label(name), os.path.abspath(path)))
     sounds.sort(key=lambda item: item[0].lower())
     return sounds
+
+
+class SoundPlayer:
+    """Reprodutor de um som por vez usando GStreamer playbin."""
+
+    def __init__(self):
+        self._playbin = Gst.ElementFactory.make("playbin", "player")
+        if self._playbin is None:
+            raise RuntimeError("Não foi possível criar o elemento playbin do GStreamer")
+        self._volume = 1.0
+        self._playbin.set_property("volume", self._volume)
+        bus = self._playbin.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self._on_message)
+
+    def _on_message(self, _bus, message):
+        t = message.type
+        if t in (Gst.MessageType.EOS, Gst.MessageType.ERROR):
+            self._playbin.set_state(Gst.State.NULL)
+
+    def play(self, path):
+        self._playbin.set_state(Gst.State.NULL)
+        self._playbin.set_property("uri", Gst.filename_to_uri(path))
+        self._playbin.set_property("volume", self._volume)
+        self._playbin.set_state(Gst.State.PLAYING)
+
+    def stop(self):
+        self._playbin.set_state(Gst.State.NULL)
+
+    def set_volume(self, fraction):
+        self._volume = max(0.0, min(1.0, float(fraction)))
+        self._playbin.set_property("volume", self._volume)
