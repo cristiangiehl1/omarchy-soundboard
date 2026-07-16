@@ -9,7 +9,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gst", "1.0")
-from gi.repository import Adw, Gtk, GLib, Gst  # noqa: E402
+from gi.repository import Adw, Gdk, Gtk, GLib, Gst  # noqa: E402
 
 Gst.init(None)
 
@@ -92,10 +92,130 @@ class SoundPlayer:
         self._playbin.set_property("volume", self._volume)
 
 
+_CYBERPUNK_CSS = b"""
+/* Cyberpunk Neon - paleta do omarchy-cyberpunk-neon */
+.cyber {
+  background-color: #120621;
+  background-image:
+    radial-gradient(circle at 15% -10%, rgba(189,0,255,0.18), transparent 55%),
+    radial-gradient(circle at 100% 115%, rgba(0,240,255,0.14), transparent 55%);
+  color: #c792ff;
+  font-family: "CaskaydiaMono Nerd Font", "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+}
+.cyber scrolledwindow,
+.cyber flowbox,
+.cyber flowboxchild,
+.cyber stack { background-color: transparent; }
+
+.cyber headerbar {
+  background-color: rgba(18,6,33,0.92);
+  border-bottom: 1px solid rgba(0,240,255,0.45);
+  box-shadow: 0 2px 14px rgba(189,0,255,0.30);
+}
+
+.cyber entry {
+  background-color: rgba(36,22,51,0.9);
+  color: #eddcff;
+  border: 1px solid rgba(189,0,255,0.55);
+  border-radius: 8px;
+  caret-color: #00f0ff;
+}
+.cyber entry:focus-within {
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0,240,255,0.55);
+}
+
+.cyber button.sound-btn {
+  background-color: rgba(36,22,51,0.55);
+  background-image: linear-gradient(160deg, rgba(189,0,255,0.16), rgba(0,240,255,0.05));
+  color: #d9b8ff;
+  border: 1px solid rgba(189,0,255,0.55);
+  border-radius: 10px;
+  font-weight: 700;
+  padding: 8px 10px;
+  transition: all 160ms ease;
+}
+.cyber button.sound-btn:hover {
+  color: #ffffff;
+  border-color: #00f0ff;
+  background-image: linear-gradient(160deg, rgba(0,240,255,0.22), rgba(189,0,255,0.16));
+  box-shadow: 0 0 16px rgba(0,240,255,0.6), inset 0 0 10px rgba(189,0,255,0.25);
+}
+.cyber button.sound-btn:active {
+  border-color: #ff2a6d;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(255,42,109,0.75);
+}
+.cyber button.sound-btn.error {
+  border-color: #ff2a6d;
+  color: #ff2a6d;
+  box-shadow: 0 0 18px rgba(255,42,109,0.85);
+}
+
+.cyber button.destructive-action {
+  background-image: linear-gradient(160deg, #ff2a6d, #bd00ff);
+  color: #120621;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(255,42,109,0.55);
+}
+.cyber button.destructive-action:hover {
+  box-shadow: 0 0 20px rgba(255,42,109,0.85);
+}
+
+.cyber button.cyber-icon {
+  color: #00f0ff;
+  background: transparent;
+  border: 1px solid rgba(0,240,255,0.35);
+  border-radius: 8px;
+}
+.cyber button.cyber-icon:hover {
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(0,240,255,0.6);
+}
+
+.cyber scale trough {
+  background-color: rgba(36,22,51,0.95);
+  border: 1px solid rgba(0,240,255,0.3);
+  border-radius: 6px;
+  min-height: 6px;
+}
+.cyber scale highlight {
+  background-image: linear-gradient(90deg, #bd00ff, #00f0ff);
+  border-radius: 6px;
+}
+.cyber scale slider {
+  background-color: #00f0ff;
+  border: 0;
+  box-shadow: 0 0 8px rgba(0,240,255,0.8);
+  min-width: 14px;
+  min-height: 14px;
+  border-radius: 50%;
+}
+
+.cyber statuspage title { color: #00f0ff; }
+.cyber statuspage image { color: #bd00ff; }
+"""
+
+
+def install_cyberpunk_css():
+    """Instala o CSS neon no display, sobrescrevendo o tema GTK ativo."""
+    display = Gdk.Display.get_default()
+    if display is None:
+        return
+    provider = Gtk.CssProvider()
+    provider.load_from_data(_CYBERPUNK_CSS)
+    Gtk.StyleContext.add_provider_for_display(
+        display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+
+
 class SoundboardWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Mesa de Sons")
         self.set_default_size(640, 480)
+        self.add_css_class("cyber")
         self._player = SoundPlayer()
 
         header = Adw.HeaderBar()
@@ -116,6 +236,7 @@ class SoundboardWindow(Adw.ApplicationWindow):
 
         reload_btn = Gtk.Button(icon_name="view-refresh-symbolic")
         reload_btn.set_tooltip_text("Reler ~/Music")
+        reload_btn.add_css_class("cyber-icon")
         reload_btn.connect("clicked", lambda _b: self.reload())
 
         header.pack_start(self._volume)
@@ -169,6 +290,7 @@ class SoundboardWindow(Adw.ApplicationWindow):
             btn = Gtk.Button(label=label)
             btn.set_hexpand(True)
             btn.set_size_request(-1, 64)
+            btn.add_css_class("sound-btn")
             btn.connect("clicked", self._on_play, path)
             self._flow.append(btn)
 
@@ -221,6 +343,7 @@ class SoundboardApp(Adw.Application):
         super().__init__(application_id="com.omarchy.soundboard")
 
     def do_activate(self):
+        install_cyberpunk_css()
         win = self.get_active_window() or SoundboardWindow(self)
         win.present()
 
